@@ -1,97 +1,68 @@
 public class GradebookOps
 {
-	// add methods here as needed
-	public static void set_all_point_value(Gradebook[] gradebook, int assign, int value)
+	public static int findStudent(String studentName, String[] allStudentNames, boolean alphabetical)
 	{
-		for (int i = 0; i < gradebook.length; i++)
-		{
-			gradebook[i].set_point_value(assign-1, value); // logical input
-		}
-	}
-	
-	public static boolean add_student(Gradebook[] gradebook, String student_name)
-	{
-		for (int i = 0; i < gradebook.length; i++)
-		{
-			if (gradebook[i].get_student_name() == null)
-			{
-				gradebook[i].set_student_name(student_name);
-				return true;
-			}
-		}
-		
-		return false;
-	}
-	
-	public static void assign_score(Gradebook[] gradebook, String student_name, int assign, int grade)
-	{
-		for (int i = 0; i < gradebook.length; i++)
-		{
-			if (gradebook[i].get_student_name().equalsIgnoreCase(student_name))
-			{
-				gradebook[i].set_score(assign-1, grade); // logical input
-			}
-		}
-	}
-	
-	public static double get_overall_grade(Gradebook[] gradebook, String student_name)
-	{
-		for (int i = 0; i < gradebook.length; i++)
-		{
-			if (gradebook[i].get_student_name().equalsIgnoreCase(student_name))
-			{
-				return gradebook[i].get_average()*100;
-			}
+		for(int i=0;i<allStudentNames.length; i++){
+			if (allStudentNames[i].equals(studentName))
+				return i;
 		}
 		
 		return -1;
 	}
+
+	public static double computeGrade(int studentIndex, int[][] scoreTable, int[] itemPointValues){
+		double sum=0; 
+		double total=0;
+			for(int s=0;s<scoreTable[studentIndex].length;s++){
+				for(int p=0;p<itemPointValues.length;p++){
+					if(scoreTable[studentIndex][s]==-1){
+						continue;					
+														}
+					sum = sum + scoreTable[studentIndex][s];
+					total = total + itemPointValues[p];
+														}
+															}			
+						double grade = (sum/total) * 100;			
+			
+					return grade; // replace this line with your code
+																								}
 	
-	public static double get_class_average_on_assign(Gradebook[] gradebook, int assign)
-	{
-		int total_num_of_students = 0;
-		int total_sum_of_grades = 0;
-		for (int i = 0; i < gradebook.length; i++)
-		{
-			if (gradebook[i].get_student_name() != null)
-			{
-				total_sum_of_grades += gradebook[i].get_score(assign-1);
-				total_num_of_students++;
-			}
-		}
+	public static double[] computeAllGrades(int[][] scoreTable, int[] itemPointValues){
 		
-		return (double) total_sum_of_grades/total_num_of_students;
+		double gradesClass[] = new double[scoreTable.length];
+		
+			for(int i=0;i<scoreTable.length;i++){
+				double fin=0;
+				double sm=0;
+					for (int j=0;j<scoreTable[i].length;j++){
+							if(scoreTable[i][j]==-1){
+								continue;
+													}
+							fin=fin+scoreTable[i][j];
+							sm=sm+itemPointValues[j];
+							gradesClass[i]=(fin/sm)*100;
+															}
+												}
+			return gradesClass; // replace this line with your code
+																					}
+
+	public static double computeClassAverage(int item, int[][] scoreTable){
+		double sum=0;
+		double counter=0;
+		
+			for(int i=0;i<scoreTable.length;i++){
+				if(scoreTable[i][item]==-1){
+					continue;
+											}
+					sum=sum+scoreTable[i][item];
+					counter=counter+1;
+				
+												}
+				double classAverage = sum/counter;	
+		
+		return classAverage; // replace this line with your code
 	}
 	
-	public static void sort_alphebetically(Gradebook[] gradebook)
-	{
-		for (int i = 0; i < gradebook.length; i++)
-		{
-			for (int j = i+1; j < gradebook.length; j++)
-			{
-				if (gradebook[j].get_student_name().compareTo(gradebook[i].get_student_name()) < 1)
-				{
-					Gradebook temp = gradebook[i];
-					gradebook[i] = gradebook[j];
-					gradebook[j] = temp;
-				}
-			}
-		}
-	}
-	
-	public static void sort_by_grade(Gradebook[] gradebook)
-	{
-		for (int i = 0; i < gradebook.length; i++)
-		{
-			for (int j = i+1; j < gradebook.length; j++)
-			{
-				if (gradebook[j].get_average() > gradebook[i].get_average())
-				{
-					Gradebook temp = gradebook[i];
-					gradebook[i] = gradebook[j];
-					gradebook[j] = temp;
-				}
-			}
-		}
-	}
+
+
 }
