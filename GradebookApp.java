@@ -1,162 +1,249 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+
 public class GradebookApp
 {
-	public static void main(String[] args)
+	public static void main(String[] args) throws IOException
 	{
-		int maxStudents = getMaximumNumberOfStudents();
-		int numGradedItems = getNumberOfGradedItems();
+		String gradesFilename;
+		int[] itemPointValues;
+		String[] allStudentNames;
+		int[][] scoreTable;
+		double[] grades;
+		boolean alphabetized;
 		
-		Gradebook[] gradebook = new Gradebook[maxStudents];
-		for (int i = 0; i < gradebook.length; i++)
-		{
-			gradebook[i] = new Gradebook(numGradedItems);
-		}
+		// read grades file
+		gradesFilename = (args.length > 0) ? args[0] : "grades.txt";
+		int[] arraySizes = computeArraySizes(gradesFilename);
+		itemPointValues = new int[arraySizes[0]];
+		allStudentNames = new String[arraySizes[1]];
+		scoreTable = new int[arraySizes[1]][arraySizes[0]];
+		readGradesFile(gradesFilename, itemPointValues, allStudentNames, scoreTable);
+		alphabetized = false;
+		
+		// compute overall grades
+		grades = GradebookOps.computeAllGrades(scoreTable, itemPointValues);
 		
 		while (true)
 		{
 			int choice = getMenuChoice();
 			
-			if (choice == 1) // Set point value for graded item
+			if (choice == 1) // Display all students' scores and grades
 			{
-				System.out.println("Which graded item?");
-				int whichItem = IO.readInt();
-				System.out.println("Enter point value for that item:");
-				int points = IO.readInt();
-				
-				if (whichItem > numGradedItems || whichItem < 0)
-				{
-					IO.reportBadInput();
-				}
-				else
-				{
-					GradebookOps.set_all_point_value(gradebook, whichItem, points);	// should return nothing
-				}
+				printGradebook(itemPointValues, allStudentNames, scoreTable, grades);
 			}
-			else if (choice == 2) // Add student
+			else if (choice == 2) // Display one student's scores and grade
 			{
 				System.out.println("What is the student's name?");
 				String studentName = IO.readString();
-				
-				// your code here
-				if (!GradebookOps.add_student(gradebook, studentName))
+				int studentIndex = GradebookOps.findStudent(studentName, allStudentNames, alphabetized);
+				if (studentIndex == -1)
 				{
-					System.out.println("Failed to add student.");
+					System.out.println("Student not found");
+					continue;
 				}
+				printStudent(studentIndex, allStudentNames, scoreTable, grades, allStudentNames[studentIndex].length() + 1);
 			}
 			else if (choice == 3) // Assign score
 			{
 				System.out.println("What is the student's name?");
 				String studentName = IO.readString();
+				int studentIndex = GradebookOps.findStudent(studentName, allStudentNames, alphabetized);
+				if (studentIndex == -1)
+				{
+					System.out.println("Student not found");
+					continue;
+				}
 				System.out.println("Which graded item?");
-				int whichItem = IO.readInt();
+				int item = IO.readInt();
 				System.out.println("Enter score:");
-				int points = IO.readInt();
-				
-				if (whichItem > numGradedItems || whichItem < 0)
-				{
-					IO.reportBadInput();
-				}
-				else
-				{
-					GradebookOps.assign_score(gradebook, studentName, whichItem, points);
-				}
-				
+				int score = IO.readInt();
+
+				scoreTable[studentIndex][item] = score;
+				grades[studentIndex] = GradebookOps.computeGrade(studentIndex, scoreTable, itemPointValues);
 			}
-			else if (choice == 4) // Get student's overall grade
-			{
-				System.out.println("What is the student's name?");
-				String studentName = IO.readString();
-				
-				// your code here
-				IO.outputDoubleAnswer(GradebookOps.get_overall_grade(gradebook, studentName));
-			}
-			else if (choice == 5) // Get class average on a particular graded item
+			else if (choice == 4) // Get class average on a particular graded item
 			{
 				System.out.println("Which graded item?");
-				int whichItem = IO.readInt();
+				int item = IO.readInt();
 				
-				if (whichItem > numGradedItems || whichItem < 0)
-				{
-					IO.reportBadInput();
-				}
-				else
-				{
-					IO.outputDoubleAnswer(GradebookOps.get_class_average_on_assign(gradebook, whichItem));
-				}
-			}
-			else if (choice == 6) // Sort students alphabetically
-			{
-				// your code 
-				GradebookOps.sort_alphebetically(gradebook);
-			}
-			else if (choice == 7) // Sort students by overall grade (descending order)
-			{
-				// your code here
-				GradebookOps.sort_by_grade(gradebook);
-			}
-			else if (choice == 8) // Display students and overall grades
-			{
-				// your code here
-				for (int i = 0; i < gradebook.length; i++)
-				{
-					IO.outputStringAnswer(gradebook[i].get_student_name());
-					IO.outputDoubleAnswer(gradebook[i].get_average()*100);
-				}
-			}
-			else // choice == 9, Quit
+				double average = GradebookOps.computeClassAverage(item, scoreTable);
+				System.out.println("Average: " + average);
+			}else if (choice == 7) // Quit
 			{
 				return;
 			}
 		}
 	}
 
-	public static int getMaximumNumberOfStudents()
+	private static String readNextLine(BufferedReader br) throws IOException
 	{
-		System.out.print("How many students can register for the course? ");
-		int maxStudents = IO.readInt();
-		while (maxStudents < 1)
+		String line;
+		
+		while ((line = br.readLine()) != null)
 		{
-			System.out.println("You must allow at least one student to register for the course.");
-			maxStudents = IO.readInt();
+			line = line.trim();
+			if ( ! line.equals("") )
+			{
+				return line;
+			}
 		}
-		return maxStudents;
-	}
 
-	public static int getNumberOfGradedItems()
+		return null;
+	}
+	
+	private static int[] computeArraySizes(String gradesFilename) throws IOException
 	{
-		System.out.print("How many graded items will there be? ");
-		int numGradedItems = IO.readInt();
-		while (numGradedItems < 1)
+		BufferedReader br;
+		String line;
+		int[] results;
+		
+		br = new BufferedReader(new FileReader(gradesFilename));
+		line = readNextLine(br);
+		if (line == null)
 		{
-			System.out.println("There must be at least one graded item for the course.");
-			numGradedItems = IO.readInt();
+			throw new IOException("Empty grades file");
 		}
-		return numGradedItems;
+		
+		results = new int[2];
+		results[0] = line.split("\\s+").length - 1;
+		results[1] = 0;
+		
+		while ((line = readNextLine(br)) != null)
+		{
+			results[1]++;
+		}
+		
+		br.close();		
+		return results;
 	}
-
+	
+	public static void readGradesFile(
+		String gradesFilename,
+		int[] itemPointValues, String[] allStudentNames, int[][] scoreTable)
+		throws IOException
+	{
+		BufferedReader br;
+		String line;
+		
+		br = new BufferedReader(new FileReader(gradesFilename));
+		
+		line = readNextLine(br);
+		parseGradesFileLine(line, itemPointValues);
+		
+		for (int studentIndex = 0 ; studentIndex < allStudentNames.length ; studentIndex++)
+		{
+			line = readNextLine(br);
+			allStudentNames[studentIndex] = parseGradesFileLine(line, scoreTable[studentIndex]);
+		}
+		
+		br.close();
+	}
+	
+	private static String parseGradesFileLine(String line, int[] numericResults)
+	{
+		String[] fields;
+		
+		fields = line.split("\\s+");
+		for (int fieldIndex = 1 ; fieldIndex < fields.length ; fieldIndex++)
+		{
+			if (fields[fieldIndex].equalsIgnoreCase("exc"))
+			{
+				numericResults[fieldIndex - 1] = -1;
+			}
+			else
+			{
+				numericResults[fieldIndex - 1] = Integer.parseInt(fields[fieldIndex]);
+			}
+		}
+		return fields[0];
+	}
+	
 	public static int getMenuChoice() 
 	{
 		System.out.println();
 		System.out.println("Menu:");
-		System.out.println("1. Set point value for graded item");
-		System.out.println("2. Add student");
+		System.out.println("1. Display all students' scores and grades");
+		System.out.println("2. Display one student's scores and grade");
 		System.out.println("3. Assign score");
-		System.out.println("4. Get student's overall grade");
-		System.out.println("5. Get class average on a particular graded item");
-		System.out.println("6. Sort students alphabetically");
-		System.out.println("7. Sort students by overall grade (descending order)");
-		System.out.println("8. Display students and overall grades");
-		System.out.println("9. Quit");
+		System.out.println("4. Get class average on a particular graded item");
+		System.out.println("7. Quit");
 		System.out.println();
 
-		System.out.print("Choice (1-9)? ");
+		System.out.print("Choice (1-7)? ");
 		int choice = IO.readInt();
-		while (choice < 1 || choice > 9) 
+		while (choice < 1 || choice > 7) 
 		{
-			System.out.print("That is not a valid menu option. Pick 1-9. ");
+			System.out.print("That is not a valid menu option. Pick 1-7. ");
 			choice = IO.readInt();
 		}
 		return choice;
 	}
+	
+	private static void printGradebook(
+		int[] itemPointValues, String[] allStudentNames, int[][] scoreTable, double[] grades)
+	{
+		int maxlength = allStudentNames[0].length();
+		for (int i = 1 ; i < allStudentNames.length ; i++)
+		{
+			maxlength = Math.max(maxlength, allStudentNames[i].length());
+		}
+		
+		printAndTab("", maxlength+1);
+		for (int item = 0 ; item < itemPointValues.length ; item++)
+		{
+			printAndTab(item);
+		}
+		System.out.println("overall grade");
+		
+		for (int studentIndex = 0 ; studentIndex < allStudentNames.length ; studentIndex++)
+		{
+			printStudent(studentIndex, allStudentNames, scoreTable, grades, maxlength+1);
+		}
+	}
+	
+	private static void printStudent(
+		int studentIndex, String[] allStudentNames, int[][] scoreTable, double[] grades,
+		int tabwidth)
+	{
+		printAndTab(allStudentNames[studentIndex], tabwidth);
+		for (int item = 0 ; item < scoreTable[0].length ; item++)
+		{
+			printAndTab(scoreTable[studentIndex][item]);
+		}
+		System.out.println(grades[studentIndex]);
+	}
+	
+	private static void printAndTab(String s, int tabwidth)
+	{
+		System.out.print(s);
+		for (int i = 0 ; i < tabwidth - s.length() ; i++)
+		{
+			System.out.print(' ');
+		}
+	}
+	
+	private static void printAndTab(int i)
+	{
+		if (i < 0)
+		{
+			System.out.print("exc");
+		}
+		else if (i < 10)
+		{
+			System.out.print("  " + i);
+		}
+		else if (i < 100)
+		{
+			System.out.print(" " + i);
+		}
+		else
+		{
+			System.out.print(i);
+		}
+		
+		System.out.print(" ");
+	}
 }
-
-
